@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useChatBackground } from "@/hooks/use-chat-background";
 import BackgroundPicker from "@/components/chat/background-picker";
+import { useClerk } from "@clerk/react";
 
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(20, "Username must be at most 20 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
@@ -50,7 +51,8 @@ export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const { bgId, setBackground, backgrounds } = useChatBackground(me?.id);
+  const { bgId, setBackground } = useChatBackground(me?.id);
+  const { signOut } = useClerk();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -161,6 +163,23 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <BackgroundPicker currentBgId={bgId} onSelect={setBackground} />
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/20 shadow-sm bg-card/50">
+          <CardHeader>
+            <CardTitle className="text-base">Sign out</CardTitle>
+            <CardDescription>Sign out of your account on this device.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={() => signOut({ redirectUrl: "/" })}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
           </CardContent>
         </Card>
       </div>

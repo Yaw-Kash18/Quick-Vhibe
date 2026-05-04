@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { ClerkProvider, Show, useClerk } from "@clerk/react";
+import { useEffect, useRef } from "react";
+import { ClerkProvider, Show, useClerk, AuthenticateWithRedirectCallback } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
-import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -29,44 +28,6 @@ function stripBase(path: string): string {
 if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
 }
-
-const clerkAppearance = {
-  theme: shadcn,
-  cssLayerName: "clerk",
-  options: {
-    logoPlacement: "inside" as const,
-    logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
-  },
-  variables: {
-    colorPrimary: "hsl(255 85% 65%)",
-    colorForeground: "hsl(0 0% 98%)",
-    colorMutedForeground: "hsl(240 5% 65%)",
-    colorDanger: "hsl(0 84% 60%)",
-    colorBackground: "hsl(240 10% 6%)",
-    colorInput: "hsl(240 10% 12%)",
-    colorInputForeground: "hsl(0 0% 98%)",
-    colorNeutral: "hsl(240 10% 12%)",
-    fontFamily: "Outfit, sans-serif",
-    borderRadius: "0.75rem",
-  },
-  elements: {
-    rootBox: "w-full flex justify-center",
-    cardBox: "bg-card border border-border rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
-    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "text-foreground font-semibold",
-    headerSubtitle: "text-muted-foreground",
-    socialButtonsBlockButtonText: "text-foreground",
-    formFieldLabel: "text-foreground",
-    footerActionLink: "text-primary hover:text-primary/90",
-    footerActionText: "text-muted-foreground",
-    dividerText: "text-muted-foreground",
-    identityPreviewEditButton: "text-primary",
-    formFieldSuccessText: "text-primary",
-    alertText: "text-destructive",
-  },
-};
 
 function HomeRedirect() {
   return (
@@ -116,6 +77,15 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function SSOCallback() {
+  return (
+    <AuthenticateWithRedirectCallback
+      signInForceRedirectUrl={`${basePath}/chat`}
+      signUpForceRedirectUrl={`${basePath}/chat`}
+    />
+  );
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -123,7 +93,6 @@ function ClerkProviderWithRoutes() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
-      appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       routerPush={(to) => setLocation(stripBase(to))}
@@ -135,6 +104,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/" component={HomeRedirect} />
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
+          <Route path="/sso-callback/*?" component={SSOCallback} />
           <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
         </Switch>

@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2 } from "lucide-react";
+import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut } from "lucide-react";
+import { useClerk } from "@clerk/react";
 import {
   useListConversations, getListConversationsQueryKey,
   useCreateConversation,
@@ -55,6 +56,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const queryClient = useQueryClient();
   const { toggle: togglePin, isPinned } = usePinnedChats();
+  const { signOut } = useClerk();
 
   const { data: conversations = [], isLoading: isLoadingConvos } = useListConversations({
     query: { queryKey: getListConversationsQueryKey(), refetchInterval: 3000 },
@@ -205,6 +207,16 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
           </Button>
           <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" asChild>
             <Link href="/settings"><Settings className="h-4 w-4" /></Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-muted-foreground hover:text-destructive transition-colors"
+            onClick={() => signOut({ redirectUrl: "/" })}
+            title="Sign out"
+            data-testid="button-sign-out"
+          >
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
