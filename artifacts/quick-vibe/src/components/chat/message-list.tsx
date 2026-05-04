@@ -8,11 +8,12 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, isToday, isYesterday } from "date-fns";
-import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus, CheckCheck } from "lucide-react";
+import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus, CheckCheck, Copy } from "lucide-react";
 import { useEmojiUsage } from "@/hooks/use-emoji-usage";
 import { useStarredMessages } from "@/hooks/use-starred-messages";
 import { useDeletedMessages } from "@/hooks/use-deleted-messages";
 import ReactionPicker from "./reaction-picker";
+import ForwardDialog from "./forward-dialog";
 import type { CSSProperties } from "react";
 
 interface User { id: number; username: string; displayName: string | null; avatarUrl: string | null; }
@@ -25,7 +26,6 @@ interface MessageListProps {
   searchQuery?: string;
   replyTo?: ReplyTo | null;
   onReply?: (msg: ReplyTo) => void;
-  onForward?: (content: string) => void;
 }
 
 function TypingDots() {
@@ -91,7 +91,7 @@ function ReplyQuote({ replyTo, isMine }: { replyTo: ReplyTo; isMine: boolean }) 
 
 interface ContextMenuState { msg: any; x: number; y: number; }
 
-function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversationId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply, onForward, isLastSeen }: {
+function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversationId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply, isLastSeen }: {
   msg: any; isMine: boolean; isGrouped: boolean; isLast: boolean;
   currentUser: User; conversationId: number;
   onEditStart: (id: number, content: string) => void;
@@ -99,11 +99,11 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
   onEditSave: () => void; onEditCancel: () => void;
   topEmojis: string[]; onRecord: (emoji: string) => void;
   onReply: (msg: any) => void;
-  onForward: (content: string) => void;
   isLastSeen: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const swipeStartX = useRef(0);
   const swipeStartY = useRef(0);
@@ -147,6 +147,10 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
 
   const handleDeleteForEveryone = () => {
     setContextMenu(null);
+    // Optimistic: remove from cache immediately
+    queryClient.setQueryData(getListMessagesQueryKey(conversationId, {}), (old: any[]) =>
+      old ? old.filter((m) => m.id !== msg.id) : old
+    );
     deleteMsg.mutate(
       { conversationId, messageId: msg.id },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(conversationId, {}) }) }
@@ -156,6 +160,11 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
   const handleDeleteForMe = () => {
     setContextMenu(null);
     deleteForMe(msg.id);
+  };
+
+  const handleCopy = () => {
+    if (msg.content) navigator.clipboard.writeText(msg.content).catch(() => {});
+    setContextMenu(null);
   };
 
   // Swipe to reply
@@ -190,6 +199,8 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
 
   return (
     <>
+      <ForwardDialog open={forwardOpen} content={msg.content ?? ""} onClose={() => setForwardOpen(false)} />
+
       <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -279,7 +290,7 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
               className="fixed z-50 bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
               style={{
                 left: Math.max(8, Math.min(contextMenu.x - 120, window.innerWidth - 248)),
-                top: Math.max(8, contextMenu.y - 260),
+                top: Math.max(8, contextMenu.y - 300),
                 width: 240,
               }}
               onClick={(e) => e.stopPropagation()}
@@ -287,10 +298,10 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
               {/* Quick reactions */}
               <div className="flex items-center gap-1 px-3 py-2.5 border-b border-border/20">
                 {["❤️", "😂", "😮", "😢", "👍", "👎"].map((emoji) => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform p-0.5">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 transition-transform p-0.5 h-9 w-9 flex items-center justify-center">{emoji}</button>
                 ))}
-                <button onClick={() => { setContextMenu(null); setPickerOpen(true); }} className="ml-auto text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted/50 transition-colors">
-                  <SmilePlus className="h-4 w-4" />
+                <button onClick={() => { setContextMenu(null); setPickerOpen(true); }} className="ml-auto text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors flex-shrink-0">
+                  <SmilePlus className="h-5 w-5" />
                 </button>
               </div>
 
@@ -306,13 +317,22 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
                 </button>
               )}
 
+              {msg.content && (
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors" onClick={handleCopy}>
+                  <Copy className="h-4 w-4 text-muted-foreground" />Copy
+                </button>
+              )}
+
               <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
-                onClick={() => { setContextMenu(null); onForward(msg.content); }}>
+                onClick={() => { setContextMenu(null); setForwardOpen(true); }}>
                 <Forward className="h-4 w-4 text-muted-foreground" />Forward
               </button>
 
               <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
-                onClick={() => { toggleStar(msg.id); setContextMenu(null); }}>
+                onClick={() => {
+                  toggleStar(msg.id, { content: msg.content ?? "", senderName: msg.sender.displayName || msg.sender.username, createdAt: msg.createdAt });
+                  setContextMenu(null);
+                }}>
                 <Star className={`h-4 w-4 ${starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 {starred ? "Unstar" : "Star"}
               </button>
@@ -338,7 +358,7 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
   );
 }
 
-export default function MessageList({ conversationId, currentUser, backgroundStyle, searchQuery = "", replyTo, onReply, onForward }: MessageListProps) {
+export default function MessageList({ conversationId, currentUser, backgroundStyle, searchQuery = "", replyTo, onReply }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -383,7 +403,6 @@ export default function MessageList({ conversationId, currentUser, backgroundSty
 
   const visibleMessages = filteredMessages.filter((m) => !isDeleted(m.id));
 
-  // Find the last message I sent that has been read
   const myReadMessages = visibleMessages.filter((m) => m.senderId === currentUser.id && m.isRead);
   const lastReadSentId = myReadMessages.length > 0 ? myReadMessages[myReadMessages.length - 1].id : null;
 
@@ -429,7 +448,6 @@ export default function MessageList({ conversationId, currentUser, backgroundSty
               topEmojis={topEmojis}
               onRecord={recordUsage}
               onReply={onReply ?? (() => {})}
-              onForward={onForward ?? (() => {})}
               isLastSeen={isLastSeen}
             />
           );

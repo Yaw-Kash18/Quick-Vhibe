@@ -7,11 +7,12 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, isToday, isYesterday } from "date-fns";
-import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus } from "lucide-react";
+import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus, Copy } from "lucide-react";
 import { useEmojiUsage } from "@/hooks/use-emoji-usage";
 import { useStarredMessages } from "@/hooks/use-starred-messages";
 import { useDeletedMessages } from "@/hooks/use-deleted-messages";
 import ReactionPicker from "./reaction-picker";
+import ForwardDialog from "./forward-dialog";
 import type { CSSProperties } from "react";
 
 interface User { id: number; username: string; displayName: string | null; avatarUrl: string | null; }
@@ -23,7 +24,6 @@ interface GroupMessageListProps {
   backgroundStyle?: CSSProperties;
   searchQuery?: string;
   onReply?: (msg: ReplyTo) => void;
-  onForward?: (content: string) => void;
 }
 
 function formatMessageTime(date: Date): string {
@@ -79,7 +79,7 @@ function ReplyQuote({ replyTo, isMine }: { replyTo: ReplyTo; isMine: boolean }) 
 
 interface ContextMenuState { msg: any; x: number; y: number; }
 
-function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, groupId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply, onForward }: {
+function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, groupId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply }: {
   msg: any; isMine: boolean; isGrouped: boolean; isLast: boolean;
   currentUser: User; groupId: number;
   onEditStart: (id: number, content: string) => void;
@@ -87,10 +87,10 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
   onEditSave: () => void; onEditCancel: () => void;
   topEmojis: string[]; onRecord: (emoji: string) => void;
   onReply: (msg: ReplyTo) => void;
-  onForward: (content: string) => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const swipeStartX = useRef(0);
   const swipeStartY = useRef(0);
@@ -135,6 +135,10 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
 
   const handleDeleteForEveryone = () => {
     setContextMenu(null);
+    // Optimistic: remove from cache immediately
+    queryClient.setQueryData(getListGroupMessagesQueryKey(groupId, {}), (old: any[]) =>
+      old ? old.filter((m) => m.id !== msg.id) : old
+    );
     deleteMsg.mutate(
       { groupId, messageId: msg.id },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListGroupMessagesQueryKey(groupId, {}) }) }
@@ -144,6 +148,11 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
   const handleDeleteForMe = () => {
     setContextMenu(null);
     deleteForMe(msg.id);
+  };
+
+  const handleCopy = () => {
+    if (msg.content) navigator.clipboard.writeText(msg.content).catch(() => {});
+    setContextMenu(null);
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -177,6 +186,8 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
 
   return (
     <>
+      <ForwardDialog open={forwardOpen} content={msg.content ?? ""} onClose={() => setForwardOpen(false)} />
+
       <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -232,7 +243,7 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
                   {msg.replyTo && <ReplyQuote replyTo={msg.replyTo} isMine={isMine} />}
                   <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed cursor-pointer select-none relative ${isMine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"} ${isGrouped && !isMine ? "rounded-tl-md" : ""} ${isGrouped && isMine ? "rounded-tr-md" : ""} ${msg.replyTo ? (isMine ? "rounded-tr-none" : "rounded-tl-none") : ""}`}>
                     {starred && <Star className="h-2.5 w-2.5 absolute top-1 right-1 fill-yellow-400 text-yellow-400" />}
-                    {hasText && <span>{msg.content}</span>}
+                    {hasText && <span className="break-words">{msg.content}</span>}
                     {hasMedia && <MediaDisplay url={msg.mediaUrl} type={msg.mediaType ?? ""} name={msg.content || undefined} />}
                   </div>
                 </div>
@@ -262,17 +273,17 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
               className="fixed z-50 bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
               style={{
                 left: Math.max(8, Math.min(contextMenu.x - 120, window.innerWidth - 248)),
-                top: Math.max(8, contextMenu.y - 260),
+                top: Math.max(8, contextMenu.y - 300),
                 width: 240,
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-1 px-3 py-2.5 border-b border-border/20">
                 {["❤️", "😂", "😮", "😢", "👍", "👎"].map((emoji) => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform p-0.5">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 transition-transform p-0.5 h-9 w-9 flex items-center justify-center">{emoji}</button>
                 ))}
-                <button onClick={() => { setContextMenu(null); setPickerOpen(true); }} className="ml-auto text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted/50 transition-colors">
-                  <SmilePlus className="h-4 w-4" />
+                <button onClick={() => { setContextMenu(null); setPickerOpen(true); }} className="ml-auto text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors flex-shrink-0">
+                  <SmilePlus className="h-5 w-5" />
                 </button>
               </div>
 
@@ -288,13 +299,22 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
                 </button>
               )}
 
+              {msg.content && (
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors" onClick={handleCopy}>
+                  <Copy className="h-4 w-4 text-muted-foreground" />Copy
+                </button>
+              )}
+
               <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
-                onClick={() => { setContextMenu(null); onForward(msg.content); }}>
+                onClick={() => { setContextMenu(null); setForwardOpen(true); }}>
                 <Forward className="h-4 w-4 text-muted-foreground" />Forward
               </button>
 
               <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
-                onClick={() => { toggleStar(msg.id); setContextMenu(null); }}>
+                onClick={() => {
+                  toggleStar(msg.id, { content: msg.content ?? "", senderName, createdAt: msg.createdAt });
+                  setContextMenu(null);
+                }}>
                 <Star className={`h-4 w-4 ${starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 {starred ? "Unstar" : "Star"}
               </button>
@@ -320,7 +340,7 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
   );
 }
 
-export default function GroupMessageList({ groupId, currentUser, backgroundStyle, searchQuery = "", onReply, onForward }: GroupMessageListProps) {
+export default function GroupMessageList({ groupId, currentUser, backgroundStyle, searchQuery = "", onReply }: GroupMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -393,7 +413,6 @@ export default function GroupMessageList({ groupId, currentUser, backgroundStyle
               topEmojis={topEmojis}
               onRecord={recordUsage}
               onReply={onReply ?? (() => {})}
-              onForward={onForward ?? (() => {})}
             />
           );
         })}

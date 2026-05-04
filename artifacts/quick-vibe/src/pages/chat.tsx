@@ -29,23 +29,10 @@ function GroupChatArea({ groupId, currentUser, backgroundStyle, onBack }: {
   const currentMember = group?.members.find((m) => m.id === currentUser.id);
   const isReadOnly = (group?.adminOnlyMessaging ?? false) && !(currentMember?.isAdmin ?? false);
 
-  const handleForward = (content: string) => {
-    setReplyTo(null);
-    setTimeout(() => {
-      const input = document.querySelector<HTMLTextAreaElement>('[data-testid="input-message"]');
-      if (input) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-        nativeInputValueSetter?.call(input, content);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.focus();
-      }
-    }, 100);
-  };
-
   return (
     <>
       <GroupHeader groupId={groupId} currentUserId={currentUser.id} onBack={onBack} onLeft={onBack} onSearch={setSearchQuery} />
-      <GroupMessageList groupId={groupId} currentUser={currentUser} backgroundStyle={backgroundStyle} searchQuery={searchQuery} onReply={setReplyTo} onForward={handleForward} />
+      <GroupMessageList groupId={groupId} currentUser={currentUser} backgroundStyle={backgroundStyle} searchQuery={searchQuery} onReply={setReplyTo} />
       <MessageInput chatType="group" chatId={groupId} readOnly={isReadOnly} readOnlyReason="Only admins can send messages in this group" replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
     </>
   );
@@ -79,19 +66,6 @@ export default function Chat() {
     setDmSearchQuery("");
   };
 
-  const handleDmForward = (content: string) => {
-    setDmReplyTo(null);
-    setTimeout(() => {
-      const input = document.querySelector<HTMLTextAreaElement>('[data-testid="input-message"]');
-      if (input) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-        nativeInputValueSetter?.call(input, content);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.focus();
-      }
-    }, 100);
-  };
-
   const hasActive = activeChat !== null;
 
   return (
@@ -109,7 +83,7 @@ export default function Chat() {
         {activeChat?.type === "dm" && (
           <>
             <ConversationHeader conversationId={activeChat.id} onBack={handleBack} onSearch={setDmSearchQuery} />
-            <MessageList conversationId={activeChat.id} currentUser={me} backgroundStyle={background.style} searchQuery={dmSearchQuery} replyTo={dmReplyTo} onReply={setDmReplyTo} onForward={handleDmForward} />
+            <MessageList conversationId={activeChat.id} currentUser={me} backgroundStyle={background.style} searchQuery={dmSearchQuery} replyTo={dmReplyTo} onReply={setDmReplyTo} />
             <MessageInput chatType="dm" chatId={activeChat.id} replyTo={dmReplyTo} onCancelReply={() => setDmReplyTo(null)} />
           </>
         )}

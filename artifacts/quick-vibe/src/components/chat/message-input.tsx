@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Smile, Paperclip, Lock, X, FileIcon, Mic, MicOff, Reply } from "lucide-react";
+import { Send, Smile, Paperclip, Lock, X, FileIcon, Mic, MicOff, Reply, AlertCircle } from "lucide-react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
 import {
@@ -58,6 +58,7 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [micDenied, setMicDenied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -117,6 +118,7 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
   };
 
   const startRecording = async () => {
+    setMicDenied(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -140,7 +142,7 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
       setIsRecording(true);
       recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
     } catch {
-      alert("Microphone access denied.");
+      setMicDenied(true);
     }
   };
 
@@ -211,6 +213,29 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
         )}
       </AnimatePresence>
 
+      {/* Mic denied notification */}
+      <AnimatePresence>
+        {micDenied && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            className="mb-2 flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-xl p-3"
+          >
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-destructive">Microphone access denied</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                To record voice notes, allow microphone access in your browser settings (tap the lock icon in the address bar).
+              </p>
+            </div>
+            <button onClick={() => setMicDenied(false)} className="flex-shrink-0 text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Reply preview */}
       <AnimatePresence>
         {replyTo && (
@@ -271,7 +296,18 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
         </button>
         <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx,.txt,.zip,.mp4,.mp3" className="hidden" onChange={handleFileSelect} />
 
-        <Textarea ref={textareaRef} placeholder="Message..." className="flex-1 resize-none min-h-[44px] max-h-32 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 text-sm rounded-2xl px-4 py-3 leading-relaxed" value={content} onChange={handleInput} onKeyDown={handleKeyDown} rows={1} data-testid="input-message" disabled={isRecording} />
+        <Textarea
+          ref={textareaRef}
+          placeholder="Message..."
+          className="flex-1 resize-none min-h-[44px] max-h-32 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 text-sm rounded-2xl px-4 py-3 leading-relaxed overflow-y-auto"
+          style={{ scrollbarWidth: "none" }}
+          value={content}
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          data-testid="input-message"
+          disabled={isRecording}
+        />
 
         {/* Voice note button or Send button */}
         {content.trim().length === 0 && !pendingMedia ? (
