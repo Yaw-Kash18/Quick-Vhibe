@@ -1,0 +1,944 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Quick Vibe messaging API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: users
+  - name: conversations
+  - name: messages
+  - name: groups
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+    patch:
+      operationId: updateMe
+      tags: [users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /users/search:
+    get:
+      operationId: searchUsers
+      tags: [users]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matching users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /users/online-status:
+    post:
+      operationId: updateOnlineStatus
+      tags: [users]
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: Unauthorized
+
+  /users/online-users:
+    get:
+      operationId: getOnlineUsers
+      tags: [users]
+      responses:
+        "200":
+          description: Online user IDs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnlineUsersResponse"
+        "401":
+          description: Unauthorized
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createConversation
+      tags: [conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}/read:
+    patch:
+      operationId: markConversationRead
+      tags: [conversations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: before
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Sent message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}/messages/{messageId}:
+    patch:
+      operationId: editMessage
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditMessageBody"
+      responses:
+        "200":
+          description: Edited message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}/messages/{messageId}/reactions:
+    post:
+      operationId: toggleReaction
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleReactionBody"
+      responses:
+        "200":
+          description: Reaction toggled (added or removed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToggleReactionResponse"
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /conversations/{id}/typing:
+    post:
+      operationId: sendTypingIndicator
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TypingIndicatorBody"
+      responses:
+        "200":
+          description: Typing indicator sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: Unauthorized
+
+  /conversations/unread-counts:
+    get:
+      operationId: getUnreadCounts
+      tags: [conversations]
+      responses:
+        "200":
+          description: Unread counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UnreadCount"
+        "401":
+          description: Unauthorized
+
+  /conversations/typing-status:
+    get:
+      operationId: getTypingStatus
+      tags: [conversations]
+      responses:
+        "200":
+          description: Typing status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TypingStatus"
+        "401":
+          description: Unauthorized
+
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [groups]
+      responses:
+        "200":
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupSummary"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createGroup
+      tags: [groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupBody"
+      responses:
+        "201":
+          description: Created group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "401":
+          description: Unauthorized
+
+  /groups/{id}:
+    get:
+      operationId: getGroup
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+    patch:
+      operationId: updateGroup
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupBody"
+      responses:
+        "200":
+          description: Updated group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /groups/{id}/members/{userId}:
+    delete:
+      operationId: removeGroupMember
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+    patch:
+      operationId: updateGroupMember
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupMemberBody"
+      responses:
+        "200":
+          description: Member updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /groups/{id}/messages:
+    get:
+      operationId: listGroupMessages
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Group messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupMessage"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: sendGroupMessage
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Sent group message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMessage"
+        "401":
+          description: Unauthorized
+
+  /groups/{id}/messages/{messageId}:
+    patch:
+      operationId: editGroupMessage
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditMessageBody"
+      responses:
+        "200":
+          description: Edited group message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMessage"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+  /groups/{id}/messages/{messageId}/reactions:
+    post:
+      operationId: toggleGroupMessageReaction
+      tags: [groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleReactionBody"
+      responses:
+        "200":
+          description: Reaction toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToggleReactionResponse"
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clerkId, username, displayName, avatarUrl, createdAt]
+
+    UpdateMeBody:
+      type: object
+      properties:
+        username:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        otherUser:
+          $ref: "#/components/schemas/User"
+        lastMessage:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            content:
+              type: string
+            senderId:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+          required: [id, content, senderId, createdAt]
+        unreadCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, otherUser, lastMessage, unreadCount, createdAt]
+
+    CreateConversationBody:
+      type: object
+      properties:
+        targetUserId:
+          type: integer
+      required: [targetUserId]
+
+    Reaction:
+      type: object
+      properties:
+        emoji:
+          type: string
+        count:
+          type: integer
+        userIds:
+          type: array
+          items:
+            type: integer
+      required: [emoji, count, userIds]
+
+    ToggleReactionBody:
+      type: object
+      properties:
+        emoji:
+          type: string
+      required: [emoji]
+
+    ToggleReactionResponse:
+      type: object
+      properties:
+        added:
+          type: boolean
+        reactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reaction"
+      required: [added, reactions]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        senderId:
+          type: integer
+        content:
+          type: string
+        mediaUrl:
+          type: ["string", "null"]
+        mediaType:
+          type: ["string", "null"]
+        isRead:
+          type: boolean
+        editedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        sender:
+          $ref: "#/components/schemas/User"
+        reactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reaction"
+      required: [id, conversationId, senderId, content, mediaUrl, mediaType, isRead, editedAt, createdAt, sender, reactions]
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+        mediaUrl:
+          type: ["string", "null"]
+        mediaType:
+          type: ["string", "null"]
+
+    EditMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    TypingIndicatorBody:
+      type: object
+      properties:
+        isTyping:
+          type: boolean
+      required: [isTyping]
+
+    UnreadCount:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        count:
+          type: integer
+      required: [conversationId, count]
+
+    TypingStatus:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        typingUserIds:
+          type: array
+          items:
+            type: integer
+      required: [conversationId, typingUserIds]
+
+    OnlineUsersResponse:
+      type: object
+      properties:
+        onlineUserIds:
+          type: array
+          items:
+            type: integer
+      required: [onlineUserIds]
+
+    GroupMemberInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        isAdmin:
+          type: boolean
+      required: [id, clerkId, username, displayName, avatarUrl, createdAt, isAdmin]
+
+    GroupSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        adminOnlyMessaging:
+          type: boolean
+        createdById:
+          type: integer
+        memberCount:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberInfo"
+        lastMessage:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            content:
+              type: string
+            senderId:
+              type: integer
+            senderName:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+          required: [id, content, senderId, senderName, createdAt]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, description, adminOnlyMessaging, createdById, memberCount, members, lastMessage, createdAt, updatedAt]
+
+    CreateGroupBody:
+      type: object
+      properties:
+        name:
+          type: string
+        memberUserIds:
+          type: array
+          items:
+            type: integer
+      required: [name, memberUserIds]
+
+    UpdateGroupBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        adminOnlyMessaging:
+          type: boolean
+
+    UpdateGroupMemberBody:
+      type: object
+      properties:
+        isAdmin:
+          type: boolean
+      required: [isAdmin]
+
+    GroupMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        groupId:
+          type: integer
+        senderId:
+          type: integer
+        content:
+          type: string
+        mediaUrl:
+          type: ["string", "null"]
+        mediaType:
+          type: ["string", "null"]
+        editedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        sender:
+          $ref: "#/components/schemas/User"
+        reactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reaction"
+      required: [id, groupId, senderId, content, mediaUrl, mediaType, editedAt, createdAt, sender, reactions]

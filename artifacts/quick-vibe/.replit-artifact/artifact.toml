@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Quick Vibe"
+version = "1.0.0"
+id = "artifacts/quick-vibe"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24762
+
+[services.development]
+run = "pnpm --filter @workspace/quick-vibe run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/quick-vibe", "run", "build" ]
+publicDir = "artifacts/quick-vibe/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24762"
+BASE_PATH = "/"
