@@ -75,4 +75,20 @@ router.get("/users/online-users", requireUser, async (req, res): Promise<void> =
   res.json({ onlineUserIds });
 });
 
+router.get("/users/all", requireUser, async (req, res): Promise<void> => {
+  const currentUser = (req as any).user;
+  const users = await db
+    .select({
+      id: usersTable.id,
+      username: usersTable.username,
+      displayName: usersTable.displayName,
+      avatarUrl: usersTable.avatarUrl,
+      createdAt: usersTable.createdAt,
+    })
+    .from(usersTable)
+    .where(ne(usersTable.id, currentUser.id))
+    .orderBy(usersTable.createdAt);
+  res.json(users);
+});
+
 export default router;

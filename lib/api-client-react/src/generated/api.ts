@@ -349,6 +349,56 @@ export function useSearchUsers<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+export const getListAllUsersUrl = () => {
+  return `/api/users/all`;
+};
+
+export const listAllUsers = async (options?: RequestInit): Promise<User[]> => {
+  return customFetch<User[]>(getListAllUsersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAllUsersQueryKey = () => {
+  return [`/api/users/all`] as const;
+};
+
+export const getListAllUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAllUsers>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listAllUsers>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListAllUsersQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllUsers>>> = ({ signal }) =>
+    listAllUsers({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAllUsers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAllUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listAllUsers>>>;
+export type ListAllUsersQueryError = ErrorType<void>;
+
+export function useListAllUsers<
+  TData = Awaited<ReturnType<typeof listAllUsers>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listAllUsers>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAllUsersQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export const getUpdateOnlineStatusUrl = () => {
   return `/api/users/online-status`;
 };

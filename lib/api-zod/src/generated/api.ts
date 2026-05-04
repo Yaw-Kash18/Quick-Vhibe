@@ -49,6 +49,15 @@ export const SearchUsersResponseItem = zod.object({
 });
 export const SearchUsersResponse = zod.array(SearchUsersResponseItem);
 
+export const ListAllUsersResponseItem = zod.object({
+  id: zod.number(),
+  username: zod.string(),
+  displayName: zod.string().nullable(),
+  avatarUrl: zod.string().nullable(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAllUsersResponse = zod.array(ListAllUsersResponseItem);
+
 export const UpdateOnlineStatusResponse = zod.object({
   ok: zod.boolean(),
 });

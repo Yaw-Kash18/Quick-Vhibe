@@ -80,6 +80,22 @@ paths:
         "401":
           description: Unauthorized
 
+  /users/all:
+    get:
+      operationId: listAllUsers
+      tags: [users]
+      responses:
+        "200":
+          description: All registered users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
   /users/online-status:
     post:
       operationId: updateOnlineStatus

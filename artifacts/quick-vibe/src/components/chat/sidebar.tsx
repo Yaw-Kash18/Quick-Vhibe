@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Star } from "lucide-react";
+import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Star, Users2 } from "lucide-react";
 import { useAuth } from "@/App";
 import {
   useListConversations, getListConversationsQueryKey,
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import CreateGroupDialog from "./create-group-dialog";
 import StarredMessagesPanel from "./starred-messages-panel";
+import PeopleList from "./people-list";
 import { usePinnedChats } from "@/hooks/use-pinned-chats";
 
 interface User {
@@ -56,6 +57,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [showStarred, setShowStarred] = useState(false);
+  const [activeTab, setActiveTab] = useState<"chats" | "people">("chats");
   const queryClient = useQueryClient();
   const { toggle: togglePin, isPinned } = usePinnedChats();
   const { signOut } = useAuth();
@@ -225,9 +227,59 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
         </div>
       </div>
 
-      {/* Search + Star button */}
-      <div className="px-3 py-2.5 border-b border-border/30 flex-shrink-0 flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* Tabs */}
+      <div className="px-3 pt-2.5 pb-0 border-b border-border/30 flex-shrink-0">
+        <div className="flex items-center gap-1 mb-0">
+          <button
+            onClick={() => setActiveTab("chats")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
+              activeTab === "chats"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Chats
+          </button>
+          <button
+            onClick={() => { setActiveTab("people"); setIsSearchingUsers(false); setSearchQuery(""); }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
+              activeTab === "people"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users2 className="h-3.5 w-3.5" />
+            People
+          </button>
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 flex-shrink-0 mb-1 transition-colors ${showStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
+            onClick={() => setShowStarred(true)}
+            title="Starred messages"
+          >
+            <Star className={`h-3.5 w-3.5 ${showStarred ? "fill-yellow-400" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* People tab */}
+      {activeTab === "people" && (
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <PeopleList
+            currentUserId={currentUser.id}
+            onSelectDM={(convId) => { onSelectDM(convId); setActiveTab("chats"); }}
+          />
+        </div>
+      )}
+
+      {/* Chats tab — search + list */}
+      {activeTab === "chats" && <>
+      {/* Search */}
+      <div className="px-3 py-2.5 border-b border-border/30 flex-shrink-0">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder={isSearchingUsers ? "Find people..." : "Search..."}
@@ -244,15 +296,6 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             </button>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-9 w-9 flex-shrink-0 transition-colors ${showStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
-          onClick={() => setShowStarred(true)}
-          title="Starred messages"
-        >
-          <Star className={`h-4 w-4 ${showStarred ? "fill-yellow-400" : ""}`} />
-        </Button>
       </div>
 
       {/* Content */}
@@ -378,6 +421,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
           )}
         </AnimatePresence>
       </div>
+      </>}
     </div>
   );
 }
