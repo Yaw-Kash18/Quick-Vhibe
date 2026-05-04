@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Loader2, MessageSquare, Shield, Zap, Users } from "lucide-react";
@@ -7,6 +7,21 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "../App";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (cfg: any) => void;
+          renderButton: (el: HTMLElement, cfg: any) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 export default function SignInPage() {
   const { signIn } = useAuth();
@@ -16,6 +31,57 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const [googleReady, setGoogleReady] = useState(false);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    const scriptId = "google-gsi";
+    if (document.getElementById(scriptId)) {
+      if (window.google) setGoogleReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => setGoogleReady(true);
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!googleReady || !GOOGLE_CLIENT_ID || !googleBtnRef.current || !window.google) return;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+    });
+    window.google.accounts.id.renderButton(googleBtnRef.current, {
+      theme: "filled_black",
+      size: "large",
+      width: googleBtnRef.current.offsetWidth || 400,
+      text: "signin_with",
+    });
+  }, [googleReady]);
+
+  const handleGoogleCredential = async (response: { credential: string }) => {
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${basePath}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Google sign-in failed."); return; }
+      signIn(data.token);
+      setLocation("/chat");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +95,7 @@ export default function SignInPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Invalid email or password.");
-        return;
-      }
+      if (!res.ok) { setError(data.error || "Invalid email or password."); return; }
       signIn(data.token);
       setLocation("/chat");
     } catch {
@@ -115,6 +178,17 @@ export default function SignInPage() {
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-sm text-muted-foreground">Sign in to continue your conversations</p>
           </div>
+
+          {GOOGLE_CLIENT_ID && (
+            <div className="space-y-3">
+              <div ref={googleBtnRef} className="w-full overflow-hidden rounded-lg" />
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-xs text-muted-foreground">or continue with email</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Camera, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, LogOut, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useChatBackground } from "@/hooks/use-chat-background";
@@ -171,6 +171,26 @@ export default function Settings() {
             <BackgroundPicker currentBgId={bgId} onSelect={setBackground} />
           </CardContent>
         </Card>
+
+        {me.role === "admin" && (
+          <Card className="border-yellow-500/20 shadow-sm bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-yellow-500" />
+                Admin Panel
+              </CardTitle>
+              <CardDescription>Manage users, roles, and system access.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="gap-2 border-yellow-500/30 hover:border-yellow-500/60 hover:bg-yellow-500/5" asChild>
+                <Link href="/admin">
+                  <Shield className="h-4 w-4 text-yellow-500" />
+                  Open Admin Panel
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-destructive/20 shadow-sm bg-card/50">
           <CardHeader>

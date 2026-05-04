@@ -9,6 +9,7 @@ import SignInPage from "./pages/sign-in";
 import SignUpPage from "./pages/sign-up";
 import Chat from "./pages/chat";
 import Settings from "./pages/settings";
+import AdminPage from "./pages/admin";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -75,6 +76,7 @@ function AppRoutes() {
         <Route path="/sign-up" component={SignUpPage} />
         <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
       </Switch>
     </QueryClientProvider>
   );
