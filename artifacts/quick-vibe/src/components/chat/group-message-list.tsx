@@ -195,7 +195,7 @@ function GroupMessageBubble({ msg, isMine, isGrouped, isLast, currentUser, group
           </div>
         )}
 
-        <div className={`max-w-[72%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
+        <div className={`max-w-[75%] sm:max-w-[65%] lg:max-w-[520px] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
           {!isMine && !isGrouped && <span className="text-[11px] text-muted-foreground font-medium mb-1 px-1">{senderName}</span>}
 
           {isEditing ? (

@@ -208,7 +208,7 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
           </div>
         )}
 
-        <div className={`max-w-[70%] ${isMine ? "items-end" : "items-start"} flex flex-col relative`}>
+        <div className={`max-w-[75%] sm:max-w-[65%] lg:max-w-[520px] ${isMine ? "items-end" : "items-start"} flex flex-col relative`}>
           {isEditing ? (
             <div className="flex flex-col gap-1 w-64">
               <textarea ref={editRef} className="w-full bg-muted/60 border border-primary/50 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
@@ -241,9 +241,9 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
                 )}
                 <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
                   {msg.replyTo && <ReplyQuote replyTo={msg.replyTo} isMine={isMine} />}
-                  <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed cursor-pointer select-none relative ${isMine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"} ${isGrouped && !isMine ? "rounded-tl-md" : ""} ${isGrouped && isMine ? "rounded-tr-md" : ""} ${msg.replyTo ? (isMine ? "rounded-tr-none" : "rounded-tl-none") : ""}`}>
+                  <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed cursor-pointer select-none relative break-words min-w-0 ${isMine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"} ${isGrouped && !isMine ? "rounded-tl-md" : ""} ${isGrouped && isMine ? "rounded-tr-md" : ""} ${msg.replyTo ? (isMine ? "rounded-tr-none" : "rounded-tl-none") : ""}`}>
                     {starred && <Star className="h-2.5 w-2.5 absolute top-1 right-1 fill-yellow-400 text-yellow-400" />}
-                    {hasText && <span>{msg.content}</span>}
+                    {hasText && <span className="whitespace-pre-wrap break-words">{msg.content}</span>}
                     {hasMedia && <MediaDisplay url={msg.mediaUrl} type={msg.mediaType ?? ""} name={msg.content || undefined} />}
                   </div>
                 </div>
