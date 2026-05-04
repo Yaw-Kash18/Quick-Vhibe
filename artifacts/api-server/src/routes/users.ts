@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, ne, and } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
-import { requireAuth, requireUser } from "../lib/auth";
+import { requireAuth, requireUser, requireAdmin } from "../lib/auth";
 import { updateOnlineStatus, getOnlineUserIds } from "../lib/typingStore";
 import {
   UpdateMeBody,
@@ -75,7 +75,7 @@ router.get("/users/online-users", requireUser, async (req, res): Promise<void> =
   res.json({ onlineUserIds });
 });
 
-router.get("/users/all", requireUser, async (req, res): Promise<void> => {
+router.get("/users/all", requireAdmin, async (req, res): Promise<void> => {
   const currentUser = (req as any).user;
   const users = await db
     .select({

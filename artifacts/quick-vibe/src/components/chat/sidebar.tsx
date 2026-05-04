@@ -26,6 +26,7 @@ interface User {
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  role?: string;
 }
 
 interface ActiveChat {
@@ -237,23 +238,25 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             <MessageSquare className="h-3.5 w-3.5" />
             Chats
           </button>
-          <button
-            onClick={() => { setActiveTab("people"); setIsSearchingUsers(false); setSearchQuery(""); }}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
-              activeTab === "people"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users2 className="h-3.5 w-3.5" />
-            People
-          </button>
+          {currentUser.role === "admin" && (
+            <button
+              onClick={() => { setActiveTab("people"); setIsSearchingUsers(false); setSearchQuery(""); }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
+                activeTab === "people"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users2 className="h-3.5 w-3.5" />
+              People
+            </button>
+          )}
           <div className="flex-1" />
         </div>
       </div>
 
-      {/* People tab */}
-      {activeTab === "people" && (
+      {/* People tab — admin only */}
+      {activeTab === "people" && currentUser.role === "admin" && (
         <div className="flex-1 overflow-hidden flex flex-col">
           <PeopleList
             currentUserId={currentUser.id}

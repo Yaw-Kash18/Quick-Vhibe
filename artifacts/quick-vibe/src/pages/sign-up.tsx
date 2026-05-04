@@ -73,8 +73,8 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Google sign-up failed."); return; }
-      // isNewUser flag from backend tells us whether this is a brand-new account
-      signIn(data.token, !!data.isNewUser);
+      // New users always start as regular user role and need username setup
+      signIn(data.token, !!data.isNewUser, "user");
       setLocation(data.isNewUser ? "/setup" : "/chat");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -96,8 +96,8 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Could not create account. Try again."); return; }
-      // New users always need to set a username — mark as new and send to /setup
-      signIn(data.token, true);
+      // New users are always regular users — send to setup to pick a username
+      signIn(data.token, true, "user");
       setLocation("/setup");
     } catch {
       setError("Something went wrong. Please try again.");

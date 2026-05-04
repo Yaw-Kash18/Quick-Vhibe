@@ -1,0 +1,41 @@
+Currently with the system, all users share the same signup and login system. I want to implement an admin system with role-based access control, without using a separate /admin login route.
+🔐 Authentication Flow
+All users (admin and regular users) must use the same signup and login page
+After login, users should be redirected based on their role:
+user → normal messaging interface
+admin → admin dashboard (full control panel)
+👤 User Roles
+Each user must have a role field (e.g., user, admin)
+Default role for new users must be user
+🧭 Admin Dashboard (Full Control Panel)
+No separate /admin login route
+Admin dashboard loads automatically after login if user role is admin
+Admin dashboard should include:
+All normal messaging features (chat, media, etc.)
+Additional admin-only features (user management, system controls, moderation tools)
+👥 Restrict People Section
+Remove the "People" section from regular users
+Move it into the admin dashboard
+Only admins can view all registered users
+🔁 Promote / Demote Users
+Admins can promote users to admin (e.g., "Make Admin" button)
+Admins can demote admins back to regular users
+These actions must be fully protected on the backend
+🔒 Security Requirements
+Backend must enforce role-based access control using middleware/guards
+Non-admin users must NOT be able to access admin endpoints even via direct API calls
+Do not rely only on frontend restrictions
+🧪 Admin Creation (Bootstrap Method — No Script)
+Do NOT use a command-line script
+Instead, use a one-time manual database update (bootstrap setup) to create the first admin
+Bootstrap Rule:
+The first admin is created manually by directly updating the database:
+Find the user with email: yawkash326@gmail.com
+Update their role field to: "admin"
+Important:
+This is a ONE-TIME setup only
+After this, admin users can promote/demote others through the dashboard
+No hardcoded login credentials should exist in the application logic
+📊 Additional Enhancements
+Log all admin actions (promotions and demotions)
+Add confirmation prompts before sensitive admin actions

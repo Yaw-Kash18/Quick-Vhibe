@@ -17,19 +17,23 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 interface AuthContextType {
   isSignedIn: boolean;
   needsSetup: boolean;
-  signIn: (token: string, isNewUser?: boolean) => void;
+  userRole: string;
+  signIn: (token: string, isNewUser?: boolean, role?: string) => void;
   signOut: () => void;
   completeSetup: () => void;
   requireSetup: () => void;
+  setUserRole: (role: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isSignedIn: false,
   needsSetup: false,
+  userRole: "user",
   signIn: () => {},
   signOut: () => {},
   completeSetup: () => {},
   requireSetup: () => {},
+  setUserRole: () => {},
 });
 
 export function useAuth() {
@@ -37,17 +41,22 @@ export function useAuth() {
 }
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Critical fix: initialize the token getter SYNCHRONOUSLY so the very first
-  // API call (fired by React Query on mount after a page refresh) already has
-  // the Bearer token attached — not waiting for useEffect to run.
+  // Critical: init token getter synchronously so the first API call on page
+  // refresh already has the Bearer token attached (not waiting for useEffect).
   const [isSignedIn, setIsSignedIn] = useState(() => {
     setAuthTokenGetter(() => localStorage.getItem("auth_token"));
     return !!localStorage.getItem("auth_token");
   });
 
   const [needsSetup, setNeedsSetup] = useState(() => !!localStorage.getItem("qv_needs_setup"));
+  const [userRole, _setUserRole] = useState(() => localStorage.getItem("user_role") || "user");
 
-  const signIn = (token: string, isNewUser?: boolean) => {
+  const setUserRole = (role: string) => {
+    localStorage.setItem("user_role", role);
+    _setUserRole(role);
+  };
+
+  const signIn = (token: string, isNewUser?: boolean, role?: string) => {
     localStorage.setItem("auth_token", token);
     setAuthTokenGetter(() => localStorage.getItem("auth_token"));
     setIsSignedIn(true);
@@ -55,13 +64,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("qv_needs_setup", "1");
       setNeedsSetup(true);
     }
+    if (role) {
+      localStorage.setItem("user_role", role);
+      _setUserRole(role);
+    }
   };
 
   const signOut = () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("qv_needs_setup");
+    localStorage.removeItem("user_role");
     setIsSignedIn(false);
     setNeedsSetup(false);
+    _setUserRole("user");
     queryClient.clear();
   };
 
@@ -76,24 +91,35 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn, needsSetup, signIn, signOut, completeSetup, requireSetup }}>
+    <AuthContext.Provider value={{ isSignedIn, needsSetup, userRole, signIn, signOut, completeSetup, requireSetup, setUserRole }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 function HomeRedirect() {
-  const { isSignedIn, needsSetup } = useAuth();
-  if (isSignedIn && needsSetup) return <Redirect to="/setup" />;
-  if (isSignedIn) return <Redirect to="/chat" />;
-  return <Home />;
+  const { isSignedIn, needsSetup, userRole } = useAuth();
+  if (!isSignedIn) return <Home />;
+  if (needsSetup) return <Redirect to="/setup" />;
+  if (userRole === "admin") return <Redirect to="/admin" />;
+  return <Redirect to="/chat" />;
 }
 
+// Chat and Settings: accessible to ALL signed-in users (including admins)
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isSignedIn, needsSetup } = useAuth();
   if (!isSignedIn) return <Redirect to="/" />;
   if (needsSetup) return <Redirect to="/setup" />;
   return <Component />;
+}
+
+// Admin: only for admin-role users
+function AdminRoute() {
+  const { isSignedIn, needsSetup, userRole } = useAuth();
+  if (!isSignedIn) return <Redirect to="/" />;
+  if (needsSetup) return <Redirect to="/setup" />;
+  if (userRole !== "admin") return <Redirect to="/chat" />;
+  return <AdminPage />;
 }
 
 function SetupRoute() {
@@ -113,7 +139,7 @@ function AppRoutes() {
         <Route path="/setup" component={SetupRoute} />
         <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
+        <Route path="/admin" component={AdminRoute} />
       </Switch>
     </QueryClientProvider>
   );

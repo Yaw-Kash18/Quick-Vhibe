@@ -9,7 +9,7 @@ import { useAuth } from "../App";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
-// Pattern used by the backend for auto-generated usernames (user_XXXXXXXX)
+// Backend-generated temporary username pattern (e.g. user_3f2a1b4c)
 const AUTO_USERNAME_RE = /^user_[0-9a-f]{8}$/;
 
 declare global {
@@ -26,8 +26,13 @@ declare global {
   }
 }
 
+interface ResolvedDestination {
+  path: "/setup" | "/chat" | "/admin";
+  role: string;
+}
+
 export default function SignInPage() {
-  const { signIn, requireSetup } = useAuth();
+  const { signIn, requireSetup, setUserRole } = useAuth();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,22 +71,26 @@ export default function SignInPage() {
     });
   }, [googleReady]);
 
-  // After sign-in, check if the user still has an auto-generated username
-  // (i.e. they signed up but never completed profile setup). If so, route them
-  // to /setup so they can pick a proper username.
-  const resolveDestination = async (token: string): Promise<"/setup" | "/chat"> => {
+  // After receiving a token, fetch the user profile to determine:
+  // 1. Whether they still need to set a username (auto-generated = needs setup)
+  // 2. Their role (admin → /admin, user → /chat)
+  const resolveDestination = async (token: string): Promise<ResolvedDestination> => {
     try {
       const res = await fetch(`${basePath}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) return "/chat";
+      if (!res.ok) return { path: "/chat", role: "user" };
       const user = await res.json();
+      const role: string = user.role ?? "user";
       if (user.username && AUTO_USERNAME_RE.test(user.username)) {
         requireSetup();
-        return "/setup";
+        return { path: "/setup", role };
       }
-    } catch {}
-    return "/chat";
+      if (role === "admin") return { path: "/admin", role };
+      return { path: "/chat", role };
+    } catch {
+      return { path: "/chat", role: "user" };
+    }
   };
 
   const handleGoogleCredential = async (response: { credential: string }) => {
@@ -95,9 +104,14 @@ export default function SignInPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Google sign-in failed."); return; }
-      signIn(data.token, !!data.isNewUser);
-      const dest = data.isNewUser ? "/setup" : await resolveDestination(data.token);
-      setLocation(dest);
+      if (data.isNewUser) {
+        signIn(data.token, true, "user");
+        setLocation("/setup");
+      } else {
+        const dest = await resolveDestination(data.token);
+        signIn(data.token, false, dest.role);
+        setLocation(dest.path);
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -118,9 +132,9 @@ export default function SignInPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Invalid email or password."); return; }
-      signIn(data.token);
       const dest = await resolveDestination(data.token);
-      setLocation(dest);
+      signIn(data.token, false, dest.role);
+      setLocation(dest.path);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

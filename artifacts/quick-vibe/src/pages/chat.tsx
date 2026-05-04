@@ -44,7 +44,7 @@ function GroupChatArea({ groupId, currentUser, backgroundStyle, onBack }: {
 
 export default function Chat() {
   const [, setLocation] = useLocation();
-  const { requireSetup } = useAuth();
+  const { requireSetup, setUserRole } = useAuth();
 
   const { data: me, isLoading: isLoadingMe, error } = useGetMe({
     query: { queryKey: getGetMeQueryKey(), retry: false },
@@ -85,6 +85,11 @@ export default function Chat() {
 
   if (!me) return null;
 
+  // Keep local storage role in sync with fresh profile data
+  if (me.role && me.role !== localStorage.getItem("user_role")) {
+    setUserRole(me.role as string);
+  }
+
   const handleBack = () => {
     setActiveChat(null);
     setDmReplyTo(null);
@@ -93,11 +98,16 @@ export default function Chat() {
 
   const hasActive = activeChat !== null;
 
+  const currentUser = {
+    ...me,
+    role: me.role ?? "user",
+  };
+
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
       <div className={`flex-shrink-0 flex flex-col border-r border-border/50 bg-card h-full w-full md:w-80 ${hasActive ? "hidden md:flex" : "flex"}`}>
         <Sidebar
-          currentUser={me}
+          currentUser={currentUser}
           activeChat={activeChat}
           onSelectDM={(id) => { setActiveChat({ type: "dm", id }); setDmReplyTo(null); setDmSearchQuery(""); }}
           onSelectGroup={(id) => setActiveChat({ type: "group", id })}
