@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, Users, Search, X } from "lucide-react";
+import { ArrowLeft, Users, Search, X, Star } from "lucide-react";
 import { useGetGroup, getGetGroupQueryKey } from "@workspace/api-client-react";
 import GroupInfoPanel from "./group-info-panel";
+import StarredMessagesPanel from "./starred-messages-panel";
 
 interface GroupHeaderProps {
   groupId: number;
@@ -15,6 +16,7 @@ export default function GroupHeader({ groupId, currentUserId, onBack, onLeft, on
   const [showInfo, setShowInfo] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showStarred, setShowStarred] = useState(false);
 
   const { data: group } = useGetGroup(groupId, {
     query: { queryKey: getGetGroupQueryKey(groupId), enabled: !!groupId, refetchInterval: 10000 },
@@ -48,6 +50,8 @@ export default function GroupHeader({ groupId, currentUserId, onBack, onLeft, on
 
   return (
     <>
+      <StarredMessagesPanel open={showStarred} onClose={() => setShowStarred(false)} />
+
       <div className="h-14 border-b border-border/30 bg-card/80 backdrop-blur-sm flex items-center px-3 sm:px-4 gap-2 sm:gap-3 flex-shrink-0" data-testid="group-header">
         {onBack && (
           <button onClick={onBack} className="md:hidden flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors p-1.5 -ml-1.5 rounded-lg hover:bg-muted/50" aria-label="Back">
@@ -84,6 +88,14 @@ export default function GroupHeader({ groupId, currentUserId, onBack, onLeft, on
                   )}
                 </p>
               </div>
+            </button>
+
+            <button
+              onClick={() => setShowStarred(true)}
+              className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-full transition-colors ${showStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400 hover:bg-muted/50"}`}
+              aria-label="Starred messages"
+            >
+              <Star className={`h-4 w-4 ${showStarred ? "fill-yellow-400" : ""}`} />
             </button>
 
             <button

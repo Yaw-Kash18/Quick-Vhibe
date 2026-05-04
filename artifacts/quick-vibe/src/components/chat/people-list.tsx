@@ -124,7 +124,7 @@ export default function PeopleList({ currentUserId, onSelectDM }: PeopleListProp
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.15, delay: Math.min(i * 0.03, 0.3) }}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors group"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
@@ -158,13 +158,13 @@ export default function PeopleList({ currentUserId, onSelectDM }: PeopleListProp
                   </div>
                 </div>
 
-                {/* Message button */}
+                {/* Message button — always visible */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleMessage(user.id)}
                   disabled={createConversation.isPending}
-                  className="flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
                   title={`Message ${displayName}`}
                 >
                   <MessageSquarePlus className="h-4 w-4" />

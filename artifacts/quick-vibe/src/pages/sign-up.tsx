@@ -141,7 +141,7 @@ export default function SignUpPage() {
             {[
               { icon: Shield, label: "No ads or data selling" },
               { icon: Zap, label: "Instant setup, free forever" },
-              { icon: Users, label: "Groups, voice notes & more" },
+              { icon: Users, label: "Groups, DMs & more" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">

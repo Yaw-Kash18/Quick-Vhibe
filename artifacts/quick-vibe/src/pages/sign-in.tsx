@@ -142,7 +142,7 @@ export default function SignInPage() {
             {[
               { icon: Shield, label: "Private & secure by design" },
               { icon: Zap, label: "Real-time message delivery" },
-              { icon: Users, label: "Groups, DMs, voice notes" },
+              { icon: Users, label: "Groups, DMs, and more" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">

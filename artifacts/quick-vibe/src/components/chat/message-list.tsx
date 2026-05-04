@@ -8,10 +8,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, isToday, isYesterday } from "date-fns";
-import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus, CheckCheck, Copy } from "lucide-react";
+import { Pencil, Check, X, Download, FileIcon, Reply, Forward, Star, Trash2, SmilePlus, CheckCheck, Copy, Pin, PinOff } from "lucide-react";
 import { useEmojiUsage } from "@/hooks/use-emoji-usage";
 import { useStarredMessages } from "@/hooks/use-starred-messages";
 import { useDeletedMessages } from "@/hooks/use-deleted-messages";
+import { usePinnedMessages } from "@/hooks/use-pinned-messages";
 import ReactionPicker from "./reaction-picker";
 import ForwardDialog from "./forward-dialog";
 import type { CSSProperties } from "react";
@@ -89,9 +90,52 @@ function ReplyQuote({ replyTo, isMine }: { replyTo: ReplyTo; isMine: boolean }) 
   );
 }
 
+function PinnedBanner({ pinnedMessages, onUnpin }: { pinnedMessages: Array<{ id: number; content: string; senderName: string }>; onUnpin: (id: number) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  if (pinnedMessages.length === 0) return null;
+  const latest = pinnedMessages[pinnedMessages.length - 1];
+  return (
+    <div className="px-3 py-2 bg-primary/5 border-b border-primary/10 flex-shrink-0">
+      <div className="flex items-start gap-2">
+        <Pin className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold text-primary">
+              {pinnedMessages.length} pinned message{pinnedMessages.length !== 1 ? "s" : ""}
+            </p>
+            {pinnedMessages.length > 1 && (
+              <button onClick={() => setExpanded((v) => !v)} className="text-[10px] text-primary/70 hover:text-primary transition-colors flex-shrink-0">
+                {expanded ? "Hide" : "Show all"}
+              </button>
+            )}
+          </div>
+          {!expanded ? (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <span className="font-medium">{latest.senderName}:</span> {latest.content}
+            </p>
+          ) : (
+            <div className="mt-1 space-y-1">
+              {pinnedMessages.map((pm) => (
+                <div key={pm.id} className="flex items-center gap-2 group">
+                  <p className="text-xs text-muted-foreground truncate flex-1">
+                    <span className="font-medium">{pm.senderName}:</span> {pm.content}
+                  </p>
+                  <button onClick={() => onUnpin(pm.id)} className="flex-shrink-0 text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100">
+                    <PinOff className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ContextMenuState { msg: any; x: number; y: number; }
 
-function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversationId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply, isLastSeen }: {
+function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversationId, onEditStart, isEditing, editContent, setEditContent, onEditSave, onEditCancel, topEmojis, onRecord, onReply, isLastSeen, onPin, onUnpin, isPinned }: {
   msg: any; isMine: boolean; isGrouped: boolean; isLast: boolean;
   currentUser: User; conversationId: number;
   onEditStart: (id: number, content: string) => void;
@@ -100,6 +144,9 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
   topEmojis: string[]; onRecord: (emoji: string) => void;
   onReply: (msg: any) => void;
   isLastSeen: boolean;
+  onPin: (msg: any) => void;
+  onUnpin: (id: number) => void;
+  isPinned: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -147,7 +194,6 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
 
   const handleDeleteForEveryone = () => {
     setContextMenu(null);
-    // Optimistic: remove from cache immediately
     queryClient.setQueryData(getListMessagesQueryKey(conversationId, {}), (old: any[]) =>
       old ? old.filter((m) => m.id !== msg.id) : old
     );
@@ -167,7 +213,6 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
     setContextMenu(null);
   };
 
-  // Swipe to reply
   const onTouchStart = (e: React.TouchEvent) => {
     swipeStartX.current = e.touches[0].clientX;
     swipeStartY.current = e.touches[0].clientY;
@@ -290,7 +335,7 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
               className="fixed z-50 bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
               style={{
                 left: Math.max(8, Math.min(contextMenu.x - 120, window.innerWidth - 248)),
-                top: Math.max(8, contextMenu.y - 300),
+                top: Math.max(8, contextMenu.y - 320),
                 width: 240,
               }}
               onClick={(e) => e.stopPropagation()}
@@ -337,6 +382,15 @@ function MessageBubble({ msg, isMine, isGrouped, isLast, currentUser, conversati
                 {starred ? "Unstar" : "Star"}
               </button>
 
+              <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  if (isPinned) { onUnpin(msg.id); } else { onPin(msg); }
+                  setContextMenu(null);
+                }}>
+                {isPinned ? <PinOff className="h-4 w-4 text-muted-foreground" /> : <Pin className="h-4 w-4 text-muted-foreground" />}
+                {isPinned ? "Unpin" : "Pin"}
+              </button>
+
               <div className="border-t border-border/20" />
 
               <button className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 text-destructive transition-colors"
@@ -366,6 +420,7 @@ export default function MessageList({ conversationId, currentUser, backgroundSty
   const { recordUsage, getTopEmojis } = useEmojiUsage(currentUser.id);
   const topEmojis = getTopEmojis(5);
   const { isDeleted } = useDeletedMessages();
+  const { pinnedForChat, pin, unpin, isPinned } = usePinnedMessages("dm", conversationId);
 
   const { data: messages = [], isLoading } = useListMessages(conversationId, {}, {
     query: { queryKey: getListMessagesQueryKey(conversationId, {}), refetchInterval: 3000, enabled: !!conversationId },
@@ -406,63 +461,73 @@ export default function MessageList({ conversationId, currentUser, backgroundSty
   const myReadMessages = visibleMessages.filter((m) => m.senderId === currentUser.id && m.isRead);
   const lastReadSentId = myReadMessages.length > 0 ? myReadMessages[myReadMessages.length - 1].id : null;
 
+  const handlePin = (msg: any) => {
+    pin({ id: msg.id, content: msg.content ?? "", senderName: msg.sender.displayName || msg.sender.username, createdAt: msg.createdAt });
+  };
+
   if (isLoading) {
     return <div className="flex-1 flex items-center justify-center"><div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>;
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1" style={backgroundStyle} data-testid="message-list">
-      {visibleMessages.length === 0 && !searchQuery && (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
-        </div>
-      )}
-      {visibleMessages.length === 0 && searchQuery && (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-sm text-muted-foreground">No messages match your search.</p>
-        </div>
-      )}
-
-      <AnimatePresence initial={false}>
-        {visibleMessages.map((msg, i) => {
-          const isMine = msg.senderId === currentUser.id;
-          const prevMsg = visibleMessages[i - 1];
-          const isGrouped = prevMsg?.senderId === msg.senderId;
-          const isLast = !visibleMessages[i + 1] || visibleMessages[i + 1].senderId !== msg.senderId;
-          const isLastSeen = isMine && msg.id === lastReadSentId;
-          return (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              isMine={isMine}
-              isGrouped={isGrouped}
-              isLast={isLast}
-              currentUser={currentUser}
-              conversationId={conversationId}
-              onEditStart={startEdit}
-              isEditing={editingId === msg.id}
-              editContent={editContent}
-              setEditContent={setEditContent}
-              onEditSave={() => saveEdit(msg.id)}
-              onEditCancel={cancelEdit}
-              topEmojis={topEmojis}
-              onRecord={recordUsage}
-              onReply={onReply ?? (() => {})}
-              isLastSeen={isLastSeen}
-            />
-          );
-        })}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isOtherTyping && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }} className="flex items-end gap-2 mt-2">
-            <div className="w-7" />
-            <div className="bg-muted rounded-2xl rounded-bl-sm px-3.5 py-2.5"><TypingDots /></div>
-          </motion.div>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <PinnedBanner pinnedMessages={pinnedForChat} onUnpin={unpin} />
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1" style={backgroundStyle} data-testid="message-list">
+        {visibleMessages.length === 0 && !searchQuery && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
+          </div>
         )}
-      </AnimatePresence>
-      <div ref={bottomRef} />
+        {visibleMessages.length === 0 && searchQuery && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-muted-foreground">No messages match your search.</p>
+          </div>
+        )}
+
+        <AnimatePresence initial={false}>
+          {visibleMessages.map((msg, i) => {
+            const isMine = msg.senderId === currentUser.id;
+            const prevMsg = visibleMessages[i - 1];
+            const isGrouped = prevMsg?.senderId === msg.senderId;
+            const isLast = !visibleMessages[i + 1] || visibleMessages[i + 1].senderId !== msg.senderId;
+            const isLastSeen = isMine && msg.id === lastReadSentId;
+            return (
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                isMine={isMine}
+                isGrouped={isGrouped}
+                isLast={isLast}
+                currentUser={currentUser}
+                conversationId={conversationId}
+                onEditStart={startEdit}
+                isEditing={editingId === msg.id}
+                editContent={editContent}
+                setEditContent={setEditContent}
+                onEditSave={() => saveEdit(msg.id)}
+                onEditCancel={cancelEdit}
+                topEmojis={topEmojis}
+                onRecord={recordUsage}
+                onReply={onReply ?? (() => {})}
+                isLastSeen={isLastSeen}
+                onPin={handlePin}
+                onUnpin={unpin}
+                isPinned={isPinned(msg.id)}
+              />
+            );
+          })}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isOtherTyping && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }} className="flex items-end gap-2 mt-2">
+              <div className="w-7" />
+              <div className="bg-muted rounded-2xl rounded-bl-sm px-3.5 py-2.5"><TypingDots /></div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }

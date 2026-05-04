@@ -1,12 +1,12 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { MessageSquare, Shield, Zap, Users, Mic, Image, Star, ArrowRight } from "lucide-react";
+import { MessageSquare, Shield, Zap, Users, Pin, Image, Star, ArrowRight } from "lucide-react";
 
 const features = [
   { icon: Shield, title: "Private by default", desc: "Your conversations stay yours" },
   { icon: Zap, title: "Real-time delivery", desc: "Messages arrive instantly" },
   { icon: Users, title: "Groups & DMs", desc: "Chat one-on-one or in groups" },
-  { icon: Mic, title: "Voice notes", desc: "Hold to record, release to send" },
+  { icon: Pin, title: "Pin messages", desc: "Keep important messages at the top" },
   { icon: Image, title: "Media sharing", desc: "Photos, files and more" },
   { icon: Star, title: "Star messages", desc: "Bookmark what matters" },
 ];
@@ -75,7 +75,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              Fast, private messaging with voice notes, groups, and beautiful design.
+              Fast, private messaging with groups, media sharing, and beautiful design.
               Built for people who want to connect — not scroll.
             </p>
           </div>

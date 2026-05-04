@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Star, Users2 } from "lucide-react";
+import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Users2 } from "lucide-react";
 import { useAuth } from "@/App";
 import {
   useListConversations, getListConversationsQueryKey,
@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import CreateGroupDialog from "./create-group-dialog";
-import StarredMessagesPanel from "./starred-messages-panel";
 import PeopleList from "./people-list";
 import { usePinnedChats } from "@/hooks/use-pinned-chats";
 
@@ -56,7 +55,6 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
-  const [showStarred, setShowStarred] = useState(false);
   const [activeTab, setActiveTab] = useState<"chats" | "people">("chats");
   const queryClient = useQueryClient();
   const { toggle: togglePin, isPinned } = usePinnedChats();
@@ -157,8 +155,6 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
 
   return (
     <div className="flex flex-col h-full w-full" data-testid="sidebar" onClick={() => contextMenu && setContextMenu(null)}>
-      <StarredMessagesPanel open={showStarred} onClose={() => setShowStarred(false)} />
-
       <CreateGroupDialog
         open={showGroupDialog}
         onClose={() => setShowGroupDialog(false)}
@@ -253,15 +249,6 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             People
           </button>
           <div className="flex-1" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 flex-shrink-0 mb-1 transition-colors ${showStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
-            onClick={() => setShowStarred(true)}
-            title="Starred messages"
-          >
-            <Star className={`h-3.5 w-3.5 ${showStarred ? "fill-yellow-400" : ""}`} />
-          </Button>
         </div>
       </div>
 
