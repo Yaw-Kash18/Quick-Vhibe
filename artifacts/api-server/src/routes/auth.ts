@@ -48,7 +48,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }).returning();
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-  res.status(201).json({ token });
+  // isNewUser=true signals the frontend to redirect to the username-setup screen
+  res.status(201).json({ token, isNewUser: true });
 });
 
 router.post("/auth/login", async (req, res): Promise<void> => {
@@ -136,8 +137,10 @@ router.post("/auth/google", async (req, res): Promise<void> => {
     }
   }
 
+  // isNewUser=true when the account still has a backend-generated temp username
+  const isNewUser = !user.username || /^user_[0-9a-f]{8}$/.test(user.username);
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-  res.json({ token });
+  res.json({ token, isNewUser });
 });
 
 export default router;

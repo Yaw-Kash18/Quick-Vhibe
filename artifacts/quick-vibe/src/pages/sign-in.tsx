@@ -9,6 +9,9 @@ import { useAuth } from "../App";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
+// Pattern used by the backend for auto-generated usernames (user_XXXXXXXX)
+const AUTO_USERNAME_RE = /^user_[0-9a-f]{8}$/;
+
 declare global {
   interface Window {
     google?: {
@@ -24,7 +27,7 @@ declare global {
 }
 
 export default function SignInPage() {
-  const { signIn } = useAuth();
+  const { signIn, requireSetup } = useAuth();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +66,24 @@ export default function SignInPage() {
     });
   }, [googleReady]);
 
+  // After sign-in, check if the user still has an auto-generated username
+  // (i.e. they signed up but never completed profile setup). If so, route them
+  // to /setup so they can pick a proper username.
+  const resolveDestination = async (token: string): Promise<"/setup" | "/chat"> => {
+    try {
+      const res = await fetch(`${basePath}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return "/chat";
+      const user = await res.json();
+      if (user.username && AUTO_USERNAME_RE.test(user.username)) {
+        requireSetup();
+        return "/setup";
+      }
+    } catch {}
+    return "/chat";
+  };
+
   const handleGoogleCredential = async (response: { credential: string }) => {
     setError("");
     setIsSubmitting(true);
@@ -74,8 +95,9 @@ export default function SignInPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Google sign-in failed."); return; }
-      signIn(data.token);
-      setLocation("/chat");
+      signIn(data.token, !!data.isNewUser);
+      const dest = data.isNewUser ? "/setup" : await resolveDestination(data.token);
+      setLocation(dest);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -97,7 +119,8 @@ export default function SignInPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Invalid email or password."); return; }
       signIn(data.token);
-      setLocation("/chat");
+      const dest = await resolveDestination(data.token);
+      setLocation(dest);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

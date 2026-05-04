@@ -73,8 +73,9 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Google sign-up failed."); return; }
-      signIn(data.token);
-      setLocation("/chat");
+      // isNewUser flag from backend tells us whether this is a brand-new account
+      signIn(data.token, !!data.isNewUser);
+      setLocation(data.isNewUser ? "/setup" : "/chat");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -95,8 +96,9 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Could not create account. Try again."); return; }
-      signIn(data.token);
-      setLocation("/chat");
+      // New users always need to set a username — mark as new and send to /setup
+      signIn(data.token, true);
+      setLocation("/setup");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useGetMe, getGetMeQueryKey, useGetGroup, getGetGroupQueryKey } from "@workspace/api-client-react";
-import ProfileSetup from "@/components/chat/profile-setup";
 import Sidebar from "@/components/chat/sidebar";
 import MessageList from "@/components/chat/message-list";
 import MessageInput from "@/components/chat/message-input";
@@ -9,6 +9,10 @@ import GroupMessageList from "@/components/chat/group-message-list";
 import GroupHeader from "@/components/chat/group-header";
 import { MessageSquare } from "lucide-react";
 import { useChatBackground } from "@/hooks/use-chat-background";
+import { useAuth } from "@/App";
+
+// Pattern for backend-generated temporary usernames (e.g. user_3f2a1b4c)
+const AUTO_USERNAME_RE = /^user_[0-9a-f]{8}$/;
 
 type ActiveChat = { type: "dm"; id: number } | { type: "group"; id: number };
 interface ReplyTo { id: number; content: string; senderName: string; }
@@ -39,6 +43,9 @@ function GroupChatArea({ groupId, currentUser, backgroundStyle, onBack }: {
 }
 
 export default function Chat() {
+  const [, setLocation] = useLocation();
+  const { requireSetup } = useAuth();
+
   const { data: me, isLoading: isLoadingMe, error } = useGetMe({
     query: { queryKey: getGetMeQueryKey(), retry: false },
   });
@@ -48,6 +55,26 @@ export default function Chat() {
   const [dmSearchQuery, setDmSearchQuery] = useState("");
   const { background } = useChatBackground(me?.id);
 
+  // If the user somehow reaches chat with an auto-generated username
+  // (e.g. they signed in on a different device before completing setup),
+  // mark them as needing setup and redirect to /setup.
+  useEffect(() => {
+    if (me && me.username && AUTO_USERNAME_RE.test(me.username)) {
+      requireSetup();
+      setLocation("/setup");
+    }
+  }, [me]);
+
+  // If the token is invalid/expired the API returns 401 → sign them out
+  useEffect(() => {
+    if (error && (error as any)?.status === 401) {
+      // Token is invalid; Auth context keeps isSignedIn, but we'll let the
+      // ProtectedRoute redirect handle it after signOut is triggered elsewhere.
+      // For now just redirect to home.
+      setLocation("/");
+    }
+  }, [error]);
+
   if (isLoadingMe) {
     return (
       <div className="flex h-[100dvh] items-center justify-center bg-background">
@@ -56,8 +83,6 @@ export default function Chat() {
     );
   }
 
-  const isNeedsSetup = error?.status === 404 || !me?.username;
-  if (isNeedsSetup) return <ProfileSetup onComplete={() => window.location.reload()} />;
   if (!me) return null;
 
   const handleBack = () => {
