@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useGetMe, getGetMeQueryKey, useUpdateMe } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useChatBackground } from "@/hooks/use-chat-background";
 import BackgroundPicker from "@/components/chat/background-picker";
-import { useClerk } from "@clerk/react";
+import { useAuth } from "../App";
 
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(20, "Username must be at most 20 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
@@ -52,7 +52,8 @@ export default function Settings() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const { bgId, setBackground } = useChatBackground(me?.id);
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
+  const [, setLocation] = useLocation();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -100,6 +101,11 @@ export default function Settings() {
       onSuccess: (user) => { queryClient.setQueryData(getGetMeQueryKey(), user); toast({ title: "Profile updated", description: "Your profile has been successfully updated." }); },
       onError: () => { toast({ title: "Update failed", description: "There was an error updating your profile.", variant: "destructive" }); },
     });
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setLocation("/");
   };
 
   return (
@@ -175,7 +181,7 @@ export default function Settings() {
             <Button
               variant="destructive"
               className="gap-2"
-              onClick={() => signOut({ redirectUrl: "/" })}
+              onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4" />
               Sign out

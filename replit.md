@@ -11,7 +11,7 @@ Real-time one-to-one and group messaging web app. pnpm workspace monorepo using 
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **Frontend**: React + Vite, Tailwind CSS v4, Framer Motion, Wouter routing, shadcn/ui
-- **Auth**: Clerk (via `@clerk/react`, `@clerk/express`)
+- **Auth**: Custom JWT (bcryptjs for passwords, jsonwebtoken for tokens stored in localStorage)
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
@@ -31,7 +31,7 @@ Real-time one-to-one and group messaging web app. pnpm workspace monorepo using 
 
 ## Database Tables
 
-- `users` — Clerk user ID, username, displayName, avatarUrl, lastSeenAt
+- `users` — email, passwordHash, username, displayName, avatarUrl, lastSeenAt
 - `conversations` — between two users (user1Id, user2Id)
 - `messages` — content, senderId, conversationId, isRead, mediaUrl, mediaType, editedAt, replyToId
 - `groups` — name, description, adminOnlyMessaging, createdById

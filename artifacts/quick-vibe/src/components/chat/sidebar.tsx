@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut } from "lucide-react";
-import { useClerk } from "@clerk/react";
+import { useAuth } from "@/App";
 import {
   useListConversations, getListConversationsQueryKey,
   useCreateConversation,
@@ -56,7 +56,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const queryClient = useQueryClient();
   const { toggle: togglePin, isPinned } = usePinnedChats();
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
 
   const { data: conversations = [], isLoading: isLoadingConvos } = useListConversations({
     query: { queryKey: getListConversationsQueryKey(), refetchInterval: 3000 },
@@ -212,7 +212,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-muted-foreground hover:text-destructive transition-colors"
-            onClick={() => signOut({ redirectUrl: "/" })}
+            onClick={() => signOut()}
             title="Sign out"
             data-testid="button-sign-out"
           >

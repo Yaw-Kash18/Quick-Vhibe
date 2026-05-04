@@ -1,9 +1,8 @@
-import { useEffect, useRef } from "react";
-import { ClerkProvider, Show, useClerk, AuthenticateWithRedirectCallback } from "@clerk/react";
-import { publishableKeyFromHost } from "@clerk/react/internal";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 import Home from "./pages/home";
 import SignInPage from "./pages/sign-in";
@@ -11,112 +10,82 @@ import SignUpPage from "./pages/sign-up";
 import Chat from "./pages/chat";
 import Settings from "./pages/settings";
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
+interface AuthContextType {
+  isSignedIn: boolean;
+  signIn: (token: string) => void;
+  signOut: () => void;
 }
 
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
+const AuthContext = createContext<AuthContextType>({
+  isSignedIn: false,
+  signIn: () => {},
+  signOut: () => {},
+});
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [isSignedIn, setIsSignedIn] = useState(() => !!localStorage.getItem("auth_token"));
+
+  useEffect(() => {
+    setAuthTokenGetter(() => localStorage.getItem("auth_token"));
+  }, []);
+
+  const signIn = (token: string) => {
+    localStorage.setItem("auth_token", token);
+    setAuthTokenGetter(() => localStorage.getItem("auth_token"));
+    setIsSignedIn(true);
+  };
+
+  const signOut = () => {
+    localStorage.removeItem("auth_token");
+    setIsSignedIn(false);
+    queryClient.clear();
+  };
+
+  return (
+    <AuthContext.Provider value={{ isSignedIn, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 function HomeRedirect() {
-  return (
-    <>
-      <Show when="signed-in">
-        <Redirect to="/chat" />
-      </Show>
-      <Show when="signed-out">
-        <Home />
-      </Show>
-    </>
-  );
+  const { isSignedIn } = useAuth();
+  if (isSignedIn) return <Redirect to="/chat" />;
+  return <Home />;
 }
 
 function ProtectedRoute({ component: Component }: { component: any }) {
-  return (
-    <>
-      <Show when="signed-in">
-        <Component />
-      </Show>
-      <Show when="signed-out">
-        <Redirect to="/" />
-      </Show>
-    </>
-  );
+  const { isSignedIn } = useAuth();
+  if (!isSignedIn) return <Redirect to="/" />;
+  return <Component />;
 }
 
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const queryClient = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
-        queryClient.clear();
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, queryClient]);
-
-  return null;
-}
-
-function SSOCallback() {
+function AppRoutes() {
   return (
-    <AuthenticateWithRedirectCallback
-      signInForceRedirectUrl={`${basePath}/chat`}
-      signUpForceRedirectUrl={`${basePath}/chat`}
-    />
-  );
-}
-
-function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
-
-  return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ClerkQueryClientCacheInvalidator />
-        <Switch>
-          <Route path="/" component={HomeRedirect} />
-          <Route path="/sign-in/*?" component={SignInPage} />
-          <Route path="/sign-up/*?" component={SignUpPage} />
-          <Route path="/sso-callback/*?" component={SSOCallback} />
-          <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
-          <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        </Switch>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <Switch>
+        <Route path="/" component={HomeRedirect} />
+        <Route path="/sign-in" component={SignInPage} />
+        <Route path="/sign-up" component={SignUpPage} />
+        <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
+        <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      </Switch>
+    </QueryClientProvider>
   );
 }
 
 export default function App() {
   return (
     <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </WouterRouter>
   );
 }

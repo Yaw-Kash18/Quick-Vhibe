@@ -16,7 +16,6 @@ export const HealthCheckResponse = zod.object({
 
 export const GetMeResponse = zod.object({
   id: zod.number(),
-  clerkId: zod.string(),
   username: zod.string(),
   displayName: zod.string().nullable(),
   avatarUrl: zod.string().nullable(),
@@ -31,7 +30,6 @@ export const UpdateMeBody = zod.object({
 
 export const UpdateMeResponse = zod.object({
   id: zod.number(),
-  clerkId: zod.string(),
   username: zod.string(),
   displayName: zod.string().nullable(),
   avatarUrl: zod.string().nullable(),
@@ -44,7 +42,6 @@ export const SearchUsersQueryParams = zod.object({
 
 export const SearchUsersResponseItem = zod.object({
   id: zod.number(),
-  clerkId: zod.string(),
   username: zod.string(),
   displayName: zod.string().nullable(),
   avatarUrl: zod.string().nullable(),
@@ -64,7 +61,6 @@ export const ListConversationsResponseItem = zod.object({
   id: zod.number(),
   otherUser: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -93,7 +89,6 @@ export const CreateConversationResponse = zod.object({
   id: zod.number(),
   otherUser: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -119,7 +114,6 @@ export const GetConversationResponse = zod.object({
   id: zod.number(),
   otherUser: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -166,7 +160,6 @@ export const ListMessagesResponseItem = zod.object({
   createdAt: zod.coerce.date(),
   sender: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -213,7 +206,6 @@ export const EditMessageResponse = zod.object({
   createdAt: zod.coerce.date(),
   sender: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -282,7 +274,6 @@ export const ListGroupsResponseItem = zod.object({
   members: zod.array(
     zod.object({
       id: zod.number(),
-      clerkId: zod.string(),
       username: zod.string(),
       displayName: zod.string().nullable(),
       avatarUrl: zod.string().nullable(),
@@ -323,7 +314,6 @@ export const GetGroupResponse = zod.object({
   members: zod.array(
     zod.object({
       id: zod.number(),
-      clerkId: zod.string(),
       username: zod.string(),
       displayName: zod.string().nullable(),
       avatarUrl: zod.string().nullable(),
@@ -364,7 +354,6 @@ export const UpdateGroupResponse = zod.object({
   members: zod.array(
     zod.object({
       id: zod.number(),
-      clerkId: zod.string(),
       username: zod.string(),
       displayName: zod.string().nullable(),
       avatarUrl: zod.string().nullable(),
@@ -426,7 +415,6 @@ export const ListGroupMessagesResponseItem = zod.object({
   createdAt: zod.coerce.date(),
   sender: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),
@@ -474,7 +462,6 @@ export const EditGroupMessageResponse = zod.object({
   createdAt: zod.coerce.date(),
   sender: zod.object({
     id: zod.number(),
-    clerkId: zod.string(),
     username: zod.string(),
     displayName: zod.string().nullable(),
     avatarUrl: zod.string().nullable(),

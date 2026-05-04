@@ -15,7 +15,6 @@ export interface OkResponse {
 
 export interface User {
   id: number;
-  clerkId: string;
   username: string;
   /** @nullable */
   displayName: string | null;
@@ -119,7 +118,6 @@ export interface OnlineUsersResponse {
 
 export interface GroupMemberInfo {
   id: number;
-  clerkId: string;
   username: string;
   /** @nullable */
   displayName: string | null;

@@ -11,8 +11,8 @@ import {
 const router: IRouter = Router();
 
 router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
-  const clerkId = (req as any).clerkId as string;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId));
+  const userId = (req as any).userId as number;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -21,26 +21,10 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.patch("/users/me", requireAuth, async (req, res): Promise<void> => {
-  const clerkId = (req as any).clerkId as string;
+  const userId = (req as any).userId as number;
   const parsed = UpdateMeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId));
-
-  if (!existing) {
-    // Create user on first patch (upsert)
-    const username = parsed.data.username ?? `user_${clerkId.slice(0, 8)}`;
-    const [created] = await db.insert(usersTable).values({
-      clerkId,
-      username,
-      displayName: parsed.data.displayName ?? null,
-      avatarUrl: parsed.data.avatarUrl ?? null,
-      lastSeenAt: new Date(),
-    }).returning();
-    res.json(created);
     return;
   }
 
@@ -50,8 +34,13 @@ router.patch("/users/me", requireAuth, async (req, res): Promise<void> => {
       ...(parsed.data.displayName !== undefined && { displayName: parsed.data.displayName }),
       ...(parsed.data.avatarUrl !== undefined && { avatarUrl: parsed.data.avatarUrl }),
     })
-    .where(eq(usersTable.clerkId, clerkId))
+    .where(eq(usersTable.id, userId))
     .returning();
+
+  if (!updated) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
   res.json(updated);
 });
 
