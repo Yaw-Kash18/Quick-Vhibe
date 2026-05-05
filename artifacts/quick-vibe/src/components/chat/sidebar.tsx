@@ -238,7 +238,7 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             <MessageSquare className="h-3.5 w-3.5" />
             Chats
           </button>
-          {currentUser.role === "admin" && (
+          {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
             <button
               onClick={() => { setActiveTab("people"); setIsSearchingUsers(false); setSearchQuery(""); }}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
@@ -255,8 +255,8 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
         </div>
       </div>
 
-      {/* People tab — admin only */}
-      {activeTab === "people" && currentUser.role === "admin" && (
+      {/* People tab — admin and super_admin only */}
+      {activeTab === "people" && (currentUser.role === "admin" || currentUser.role === "super_admin") && (
         <div className="flex-1 overflow-hidden flex flex-col">
           <PeopleList
             currentUserId={currentUser.id}

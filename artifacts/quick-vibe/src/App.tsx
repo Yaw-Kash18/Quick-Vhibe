@@ -99,11 +99,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+function isAdminOrAbove(role: string) { return role === "admin" || role === "super_admin"; }
+
 function HomeRedirect() {
   const { isSignedIn, needsSetup, userRole } = useAuth();
   if (!isSignedIn) return <Home />;
   if (needsSetup) return <Redirect to="/setup" />;
-  if (userRole === "admin") return <Redirect to="/admin" />;
+  if (isAdminOrAbove(userRole)) return <Redirect to="/admin" />;
   return <Redirect to="/chat" />;
 }
 
@@ -115,12 +117,12 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
-// Admin: only for admin-role users
+// Admin: for admin and super_admin roles
 function AdminRoute() {
   const { isSignedIn, needsSetup, userRole } = useAuth();
   if (!isSignedIn) return <Redirect to="/" />;
   if (needsSetup) return <Redirect to="/setup" />;
-  if (userRole !== "admin") return <Redirect to="/chat" />;
+  if (!isAdminOrAbove(userRole)) return <Redirect to="/chat" />;
   return <AdminPage />;
 }
 

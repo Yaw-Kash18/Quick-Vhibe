@@ -86,7 +86,7 @@ export default function SignInPage() {
         requireSetup();
         return { path: "/setup", role };
       }
-      if (role === "admin") return { path: "/admin", role };
+      if (role === "admin" || role === "super_admin") return { path: "/admin", role };
       return { path: "/chat", role };
     } catch {
       return { path: "/chat", role: "user" };
