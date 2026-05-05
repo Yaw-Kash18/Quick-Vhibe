@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Smile, Paperclip, Lock, X, FileIcon, Reply } from "lucide-react";
+import { Send, Smile, Paperclip, Lock, X, FileIcon, Reply, ChevronDown } from "lucide-react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
 import {
@@ -51,9 +51,12 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+const QUICK_EMOJIS = ["😊", "😂", "❤️", "👍", "🔥", "😍", "🙏", "😭", "✨", "💯"];
+
 export default function MessageInput({ chatType, chatId, readOnly, readOnlyReason, replyTo, onCancelReply }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFullPicker, setShowFullPicker] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ url: string; type: string; name: string } | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -79,15 +82,29 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
     }
   };
 
-  const handleEmojiSelect = (emoji: { native: string }) => {
+  const insertEmoji = (native: string) => {
     const textarea = textareaRef.current;
-    if (!textarea) { setContent((c) => c + emoji.native); return; }
+    if (!textarea) { setContent((c) => c + native); return; }
     const start = textarea.selectionStart ?? content.length;
     const end = textarea.selectionEnd ?? content.length;
-    const newContent = content.slice(0, start) + emoji.native + content.slice(end);
+    const newContent = content.slice(0, start) + native + content.slice(end);
     setContent(newContent);
-    requestAnimationFrame(() => { textarea.focus(); const pos = start + emoji.native.length; textarea.setSelectionRange(pos, pos); });
+    requestAnimationFrame(() => { textarea.focus(); const pos = start + native.length; textarea.setSelectionRange(pos, pos); });
+  };
+
+  const handleEmojiSelect = (emoji: { native: string }) => {
+    insertEmoji(emoji.native);
     setShowEmojiPicker(false);
+    setShowFullPicker(false);
+  };
+
+  const handleQuickEmoji = (emoji: string) => {
+    insertEmoji(emoji);
+  };
+
+  const closeEmojiPicker = () => {
+    setShowEmojiPicker(false);
+    setShowFullPicker(false);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +160,7 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-    if (e.key === "Escape" && showEmojiPicker) setShowEmojiPicker(false);
+    if (e.key === "Escape" && showEmojiPicker) closeEmojiPicker();
   };
 
   if (readOnly) {
@@ -166,9 +183,47 @@ export default function MessageInput({ chatType, chatId, readOnly, readOnlyReaso
       <AnimatePresence>
         {showEmojiPicker && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
-            <motion.div initial={{ opacity: 0, y: 8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.96 }} transition={{ duration: 0.15 }} className="absolute bottom-20 left-3 sm:left-4 z-50">
-              <Picker data={data} onEmojiSelect={handleEmojiSelect} theme="dark" previewPosition="none" skinTonePosition="none" maxFrequentRows={2} />
+            <div className="fixed inset-0 z-40" onClick={closeEmojiPicker} />
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute bottom-20 left-3 sm:left-4 z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {showFullPicker ? (
+                <div className="shadow-2xl rounded-2xl overflow-hidden border border-border/40">
+                  <Picker data={data} onEmojiSelect={handleEmojiSelect} theme="dark" previewPosition="none" skinTonePosition="none" maxFrequentRows={2} />
+                </div>
+              ) : (
+                <div className="flex items-center gap-0.5 bg-card/95 backdrop-blur-md border border-border/60 rounded-2xl shadow-xl px-2 py-2">
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <motion.button
+                      key={emoji}
+                      type="button"
+                      whileHover={{ scale: 1.25 }}
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => handleQuickEmoji(emoji)}
+                      className="h-10 w-10 text-2xl flex items-center justify-center rounded-xl hover:bg-muted/70 transition-colors"
+                      title={emoji}
+                    >
+                      {emoji}
+                    </motion.button>
+                  ))}
+                  <div className="w-px h-6 bg-border/50 mx-1 flex-shrink-0" />
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowFullPicker(true)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted/70 transition-colors text-muted-foreground hover:text-foreground"
+                    title="Open full emoji picker"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </motion.button>
+                </div>
+              )}
             </motion.div>
           </>
         )}

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Users2 } from "lucide-react";
+import { Search, Plus, Settings, MessageSquare, X, Users, Pin, Trash2, LogOut, Users2, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/App";
 import {
   useListConversations, getListConversationsQueryKey,
@@ -208,6 +208,11 @@ export default function Sidebar({ currentUser, activeChat, onSelectDM, onSelectG
             onClick={() => setShowGroupDialog(true)} data-testid="button-new-group">
             <Users className="h-4 w-4" />
           </Button>
+          {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary transition-colors" asChild title="Admin Dashboard">
+              <Link href="/admin"><LayoutDashboard className="h-4 w-4" /></Link>
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" asChild>
             <Link href="/settings"><Settings className="h-4 w-4" /></Link>
           </Button>
