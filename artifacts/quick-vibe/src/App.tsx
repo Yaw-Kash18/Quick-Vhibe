@@ -7,6 +7,8 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 import Home from "./pages/home";
 import SignInPage from "./pages/sign-in";
 import SignUpPage from "./pages/sign-up";
+import ForgotPasswordPage from "./pages/forgot-password";
+import ResetPasswordPage from "./pages/reset-password";
 import Chat from "./pages/chat";
 import Settings from "./pages/settings";
 import AdminPage from "./pages/admin";
@@ -136,6 +138,8 @@ function AppRoutes() {
         <Route path="/" component={HomeRedirect} />
         <Route path="/sign-in" component={SignInPage} />
         <Route path="/sign-up" component={SignUpPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/setup" component={SetupRoute} />
         <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />

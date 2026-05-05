@@ -11,6 +11,24 @@ const router: IRouter = Router();
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// ─── Password reset token store (in-memory, expires in 1 hour) ───────────────
+interface ResetToken {
+  userId: number;
+  email: string;
+  expiresAt: number;
+}
+const resetTokens = new Map<string, ResetToken>();
+
+// Periodically clean up expired tokens
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of resetTokens.entries()) {
+    if (data.expiresAt < now) resetTokens.delete(token);
+  }
+}, 10 * 60 * 1000); // every 10 min
+
+// ─── Auth routes ──────────────────────────────────────────────────────────────
+
 router.post("/auth/register", async (req, res): Promise<void> => {
   const { email, password } = req.body;
   if (!email || typeof email !== "string" || !password || typeof password !== "string") {
@@ -48,7 +66,6 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }).returning();
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-  // isNewUser=true signals the frontend to redirect to the username-setup screen
   res.status(201).json({ token, isNewUser: true });
 });
 
@@ -80,6 +97,87 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   res.json({ token });
 });
+
+// ─── Forgot password ──────────────────────────────────────────────────────────
+
+router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body;
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const [user] = await db
+    .select({ id: usersTable.id, email: usersTable.email, passwordHash: usersTable.passwordHash })
+    .from(usersTable)
+    .where(eq(usersTable.email, normalizedEmail));
+
+  // Always respond the same way whether or not the email exists (prevents enumeration)
+  if (!user || !user.passwordHash) {
+    // No account, or Google-only account — still respond generically
+    res.json({ message: "If that email has an account, a reset link has been sent." });
+    return;
+  }
+
+  // Invalidate any previous token for this user
+  for (const [t, data] of resetTokens.entries()) {
+    if (data.userId === user.id) resetTokens.delete(t);
+  }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  resetTokens.set(token, {
+    userId: user.id,
+    email: normalizedEmail,
+    expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
+  });
+
+  // Build the reset URL (works for any domain)
+  const origin = req.headers.origin || `https://${req.headers.host}`;
+  const resetUrl = `${origin}/reset-password?token=${token}`;
+
+  // In a production app you'd email this link. For now we return it directly.
+  res.json({
+    message: "Reset link generated successfully.",
+    resetUrl,
+  });
+});
+
+// ─── Reset password ───────────────────────────────────────────────────────────
+
+router.post("/auth/reset-password", async (req, res): Promise<void> => {
+  const { token, password } = req.body;
+  if (!token || typeof token !== "string" || !password || typeof password !== "string") {
+    res.status(400).json({ error: "Token and new password are required" });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const record = resetTokens.get(token);
+  if (!record) {
+    res.status(400).json({ error: "This reset link is invalid or has already been used." });
+    return;
+  }
+  if (record.expiresAt < Date.now()) {
+    resetTokens.delete(token);
+    res.status(400).json({ error: "This reset link has expired. Please request a new one." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await db
+    .update(usersTable)
+    .set({ passwordHash })
+    .where(eq(usersTable.id, record.userId));
+
+  resetTokens.delete(token);
+  res.json({ message: "Password updated successfully. You can now sign in." });
+});
+
+// ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 router.post("/auth/google", async (req, res): Promise<void> => {
   const { credential } = req.body;
@@ -137,7 +235,6 @@ router.post("/auth/google", async (req, res): Promise<void> => {
     }
   }
 
-  // isNewUser=true when the account still has a backend-generated temp username
   const isNewUser = !user.username || /^user_[0-9a-f]{8}$/.test(user.username);
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   res.json({ token, isNewUser });

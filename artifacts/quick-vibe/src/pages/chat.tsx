@@ -83,12 +83,14 @@ export default function Chat() {
     );
   }
 
-  if (!me) return null;
+  // Sync role from fresh profile into localStorage/context (must be in effect, not render)
+  useEffect(() => {
+    if (me?.role && me.role !== localStorage.getItem("user_role")) {
+      setUserRole(me.role as string);
+    }
+  }, [me?.role]);
 
-  // Keep local storage role in sync with fresh profile data
-  if (me.role && me.role !== localStorage.getItem("user_role")) {
-    setUserRole(me.role as string);
-  }
+  if (!me) return null;
 
   const handleBack = () => {
     setActiveChat(null);
