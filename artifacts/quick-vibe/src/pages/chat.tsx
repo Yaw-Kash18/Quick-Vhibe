@@ -68,12 +68,16 @@ export default function Chat() {
   // If the token is invalid/expired the API returns 401 → sign them out
   useEffect(() => {
     if (error && (error as any)?.status === 401) {
-      // Token is invalid; Auth context keeps isSignedIn, but we'll let the
-      // ProtectedRoute redirect handle it after signOut is triggered elsewhere.
-      // For now just redirect to home.
       setLocation("/");
     }
   }, [error]);
+
+  // Sync role from fresh profile into localStorage/context
+  useEffect(() => {
+    if (me?.role && me.role !== localStorage.getItem("user_role")) {
+      setUserRole(me.role as string);
+    }
+  }, [me?.role]);
 
   if (isLoadingMe) {
     return (
@@ -82,13 +86,6 @@ export default function Chat() {
       </div>
     );
   }
-
-  // Sync role from fresh profile into localStorage/context (must be in effect, not render)
-  useEffect(() => {
-    if (me?.role && me.role !== localStorage.getItem("user_role")) {
-      setUserRole(me.role as string);
-    }
-  }, [me?.role]);
 
   if (!me) return null;
 
